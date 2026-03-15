@@ -10,8 +10,11 @@ services:
       - PORT=8080
       - GIN_MODE=release
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
     ports:
       - "8080:8080"
+    volumes:
+      - alerts_data:/data
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
       interval: 30s
@@ -31,3 +34,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
+volumes:
+  alerts_data:

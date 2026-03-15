@@ -32,3 +32,15 @@ export type TimeFrame = '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w'
 
 export type SortField = 'rank' | 'price' | 'change' | 'volume'
 export type SortOrder = 'asc' | 'desc'
+
+export interface Alert {
+  id: number
+  user_id: number
+  chat_id: number
+  symbol: string
+  condition: 'above' | 'below'
+  price: number
+  active: boolean
+  triggered: boolean
+  created_at: string
+}

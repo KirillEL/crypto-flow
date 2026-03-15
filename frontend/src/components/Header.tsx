@@ -1,13 +1,15 @@
-import { useState } from 'react'
 import { useCryptoStore } from '../store/cryptoStore'
+import { useAlertStore } from '../store/alertStore'
 
 interface HeaderProps {
-  activeTab: 'market' | 'watchlist'
-  onTabChange: (tab: 'market' | 'watchlist') => void
+  activeTab: 'market' | 'watchlist' | 'alerts'
+  onTabChange: (tab: 'market' | 'watchlist' | 'alerts') => void
 }
 
 export function Header({ activeTab, onTabChange }: HeaderProps) {
   const { wsConnected, watchlist } = useCryptoStore()
+  const { alerts } = useAlertStore()
+  const activeAlerts = alerts.filter((a) => a.active && !a.triggered).length
 
   return (
     <header className="sticky top-0 z-50 bg-bg-primary border-b border-border backdrop-blur-xl bg-opacity-95">
@@ -52,6 +54,23 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
                 activeTab === 'watchlist' ? 'bg-white/20' : 'bg-accent-blue/20 text-accent-blue'
               }`}>
                 {watchlist.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => onTabChange('alerts')}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-1.5 ${
+              activeTab === 'alerts'
+                ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/20'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            Alerts
+            {activeAlerts > 0 && (
+              <span className={`text-xs rounded-full px-1.5 py-0.5 font-bold ${
+                activeTab === 'alerts' ? 'bg-white/20' : 'bg-accent-blue/20 text-accent-blue'
+              }`}>
+                {activeAlerts}
               </span>
             )}
           </button>
