@@ -3,9 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useCryptoStore } from '../store/cryptoStore'
 import { PriceChart } from '../components/PriceChart'
 import { formatPrice, formatPercent, formatVolume } from '../utils/format'
-import type { Candle, TimeFrame } from '../types'
+import type { Candle, Coin, TimeFrame } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
+const BOT_NAME = import.meta.env.VITE_TELEGRAM_BOT_NAME || ''
+const APP_NAME = import.meta.env.VITE_TELEGRAM_APP_NAME || 'app'
 
 const STAT_ITEM = ({ label, value }: { label: string; value: string }) => (
   <div className="bg-bg-secondary rounded-xl p-3">
@@ -20,10 +22,26 @@ export function CoinDetail() {
   const { coins, watchlist, toggleWatchlist, selectedTimeFrame, setTimeFrame } = useCryptoStore()
   const [candles, setCandles] = useState<Candle[]>([])
   const [loadingChart, setLoadingChart] = useState(false)
+  const [externalCoin, setExternalCoin] = useState<Coin | null>(null)
+  const [notFound, setNotFound] = useState(false)
 
-  const coin = coins.find((c) => c.symbol === symbol)
+  const storeCoin = coins.find((c) => c.symbol === symbol)
+  const coin = storeCoin ?? externalCoin
   const isWatched = symbol ? watchlist.includes(symbol) : false
   const isPositive = (coin?.priceChangePercent24h ?? 0) >= 0
+
+  // Fetch coin from API if not in local store (dynamic coin support)
+  useEffect(() => {
+    if (storeCoin || !symbol) return
+    fetch(`${API_BASE}/search?q=${encodeURIComponent(symbol)}`)
+      .then((r) => r.json())
+      .then((data: Coin[]) => {
+        const found = data.find((c) => c.symbol === symbol.toUpperCase())
+        if (found) setExternalCoin(found)
+        else setNotFound(true)
+      })
+      .catch(() => setNotFound(true))
+  }, [symbol, storeCoin])
 
   const fetchCandles = useCallback(async (tf: TimeFrame) => {
     if (!symbol) return
@@ -49,11 +67,35 @@ export function CoinDetail() {
     fetchCandles(tf)
   }
 
+  const handleShare = () => {
+    if (!coin || !symbol) return
+    const pct = coin.priceChangePercent24h
+    const sign = pct >= 0 ? '+' : ''
+    const text = `${coin.symbol} $${formatPrice(coin.price)} (${sign}${pct.toFixed(2)}%) — смотри в CryptoFlow`
+
+    if (BOT_NAME) {
+      const url = `https://t.me/share/url?url=https://t.me/${BOT_NAME}/${APP_NAME}?startapp=coin_${symbol}&text=${encodeURIComponent(text)}`
+      window.Telegram?.WebApp?.openTelegramLink(url)
+    } else {
+      // fallback: copy to clipboard
+      navigator.clipboard?.writeText(text).catch(() => {})
+    }
+  }
+
+  if (notFound) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <p className="text-text-muted">Монета не найдена</p>
+        <button onClick={() => navigate(-1)} className="mt-4 text-accent-blue text-sm">Назад</button>
+      </div>
+    )
+  }
+
   if (!coin) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <p className="text-text-muted">Coin not found</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-accent-blue text-sm">Go back</button>
+        <div className="w-10 h-10 rounded-full border-2 border-accent-blue border-t-transparent animate-spin mb-4" />
+        <p className="text-text-muted text-sm">Загрузка...</p>
       </div>
     )
   }
@@ -85,6 +127,18 @@ export function CoinDetail() {
           <div className="text-text-muted text-xs">{coin.name}</div>
         </div>
 
+        {/* Share button */}
+        <button
+          onClick={handleShare}
+          className="w-8 h-8 rounded-xl bg-bg-card flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
+          title="Поделиться"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          </svg>
+        </button>
+
+        {/* Watchlist star */}
         <button
           onClick={() => symbol && toggleWatchlist(symbol)}
           className="w-8 h-8 rounded-xl bg-bg-card flex items-center justify-center"

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"cryptoflow/internal/models"
@@ -139,6 +140,78 @@ func (s *BinanceService) getSparkline(symbol string) ([]float64, error) {
 		}
 	}
 	return prices, nil
+}
+
+// SearchCoins searches for USDT pairs by symbol prefix (case-insensitive).
+func (s *BinanceService) SearchCoins(query string) ([]models.Coin, error) {
+	body, err := s.get("/api/v3/ticker/24hr")
+	if err != nil {
+		return nil, err
+	}
+
+	var tickers []models.BinanceTicker
+	if err := json.Unmarshal(body, &tickers); err != nil {
+		return nil, fmt.Errorf("parse error: %w", err)
+	}
+
+	upper := strings.ToUpper(query)
+	results := make([]models.Coin, 0, 10)
+	for _, t := range tickers {
+		if !strings.HasSuffix(t.Symbol, "USDT") {
+			continue
+		}
+		base := t.Symbol[:len(t.Symbol)-4]
+		if !strings.HasPrefix(base, upper) {
+			continue
+		}
+		name := coinNames[base]
+		if name == "" {
+			name = base
+		}
+		results = append(results, models.Coin{
+			Symbol:                base,
+			Name:                  name,
+			Price:                 parseFloat(t.LastPrice),
+			PriceChange24h:        parseFloat(t.PriceChange),
+			PriceChangePercent24h: parseFloat(t.PriceChangePercent),
+			High24h:               parseFloat(t.HighPrice),
+			Low24h:                parseFloat(t.LowPrice),
+			Volume24h:             parseFloat(t.QuoteVolume),
+		})
+		if len(results) >= 10 {
+			break
+		}
+	}
+	return results, nil
+}
+
+// GetCoin returns a single coin by symbol (without USDT suffix).
+func (s *BinanceService) GetCoin(symbol string) (*models.Coin, error) {
+	body, err := s.get("/api/v3/ticker/24hr?symbol=" + strings.ToUpper(symbol) + "USDT")
+	if err != nil {
+		return nil, err
+	}
+
+	var t models.BinanceTicker
+	if err := json.Unmarshal(body, &t); err != nil {
+		return nil, fmt.Errorf("parse error: %w", err)
+	}
+
+	base := strings.ToUpper(symbol)
+	name := coinNames[base]
+	if name == "" {
+		name = base
+	}
+	return &models.Coin{
+		Symbol:                base,
+		Name:                  name,
+		Price:                 parseFloat(t.LastPrice),
+		PriceChange24h:        parseFloat(t.PriceChange),
+		PriceChangePercent24h: parseFloat(t.PriceChangePercent),
+		High24h:               parseFloat(t.HighPrice),
+		Low24h:                parseFloat(t.LowPrice),
+		Volume24h:             parseFloat(t.QuoteVolume),
+	}, nil
 }
 
 func (s *BinanceService) GetCandles(symbol, interval string, limit int) ([]models.Candle, error) {

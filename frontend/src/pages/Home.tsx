@@ -1,17 +1,20 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useCryptoStore } from '../store/cryptoStore'
 import { CoinCard } from '../components/CoinCard'
 import { SearchBar } from '../components/SearchBar'
 import { SortBar } from '../components/SortBar'
+import { MarketBanner } from '../components/MarketBanner'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { Coin } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
-
 const WS_SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'LINK', 'UNI', 'ATOM', 'LTC', 'TRX']
 
 export function Home() {
   const { coins, setCoins, setLoading, setError, searchQuery, sortField, sortOrder, isLoading, error } = useCryptoStore()
+  const [searchResults, setSearchResults] = useState<Coin[]>([])
+  const searchDebounce = useRef<ReturnType<typeof setTimeout>>()
+
   useWebSocket(WS_SYMBOLS)
 
   useEffect(() => {
@@ -31,6 +34,29 @@ export function Home() {
     }
     fetchCoins()
   }, [setCoins, setLoading, setError])
+
+  // Dynamic search — fires when query doesn't match local coins
+  useEffect(() => {
+    clearTimeout(searchDebounce.current)
+    if (!searchQuery || searchQuery.length < 1) {
+      setSearchResults([])
+      return
+    }
+    searchDebounce.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(searchQuery)}`)
+        if (res.ok) {
+          const data: Coin[] = await res.json()
+          // Only show API results for coins NOT in the local list
+          const localSymbols = new Set(coins.map((c) => c.symbol))
+          setSearchResults(data.filter((c) => !localSymbols.has(c.symbol)))
+        }
+      } catch {
+        // silently ignore search errors
+      }
+    }, 350)
+    return () => clearTimeout(searchDebounce.current)
+  }, [searchQuery, coins])
 
   const filteredCoins = useMemo(() => {
     let list = [...coins]
@@ -99,23 +125,38 @@ export function Home() {
 
   return (
     <div className="animate-fade-in">
-      <div className="pt-3">
+      <MarketBanner />
+      <div className="pt-2">
         <SearchBar />
         <SortBar />
       </div>
 
       <div className="divide-y divide-border/50">
-        {filteredCoins.length === 0 ? (
+        {filteredCoins.map((coin, i) => (
+          <CoinCard key={coin.symbol} coin={coin} rank={sortField === 'rank' ? i + 1 : undefined} />
+        ))}
+
+        {/* External search results (coins not in top 15) */}
+        {searchResults.length > 0 && (
+          <>
+            {filteredCoins.length > 0 && (
+              <div className="px-4 py-2">
+                <span className="text-text-muted text-xs font-medium">Другие монеты</span>
+              </div>
+            )}
+            {searchResults.map((coin) => (
+              <CoinCard key={`ext-${coin.symbol}`} coin={coin} />
+            ))}
+          </>
+        )}
+
+        {filteredCoins.length === 0 && searchResults.length === 0 && searchQuery && (
           <div className="flex flex-col items-center py-16 text-text-muted">
             <svg className="w-12 h-12 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <p className="text-sm">No coins found</p>
+            <p className="text-sm">Монета не найдена</p>
           </div>
-        ) : (
-          filteredCoins.map((coin, i) => (
-            <CoinCard key={coin.symbol} coin={coin} rank={sortField === 'rank' ? i + 1 : undefined} />
-          ))
         )}
       </div>
     </div>

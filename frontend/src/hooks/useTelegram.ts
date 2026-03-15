@@ -10,6 +10,9 @@ declare global {
         enableClosingConfirmation: () => void
         setHeaderColor: (color: string) => void
         setBackgroundColor: (color: string) => void
+        openTelegramLink: (url: string) => void
+        openLink: (url: string) => void
+        switchInlineQuery: (query: string, choose_chat_types?: string[]) => void
         MainButton: {
           text: string
           show: () => void
@@ -30,6 +33,7 @@ declare global {
             last_name?: string
             username?: string
           }
+          start_param?: string
         }
       }
     }

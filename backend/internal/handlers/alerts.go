@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -11,33 +12,77 @@ import (
 )
 
 type AlertHandler struct {
-	db *sql.DB
+	db      *sql.DB
+	botName string
+	appName string
 }
 
-func NewAlertHandler(db *sql.DB) *AlertHandler {
-	return &AlertHandler{db: db}
+func NewAlertHandler(db *sql.DB, botName, appName string) *AlertHandler {
+	return &AlertHandler{db: db, botName: botName, appName: appName}
 }
 
 func (h *AlertHandler) Create(c *gin.Context) {
 	var body struct {
 		UserID    int64   `json:"user_id" binding:"required"`
-		ChatID    int64   `json:"chat_id" binding:"required"`
 		Symbol    string  `json:"symbol" binding:"required"`
 		Condition string  `json:"condition" binding:"required"`
-		Price     float64 `json:"price" binding:"required"`
+		Price     float64 `json:"price"`
+		AlertType string  `json:"alert_type"`
+		Threshold float64 `json:"threshold"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if body.Condition != "above" && body.Condition != "below" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "condition must be 'above' or 'below'"})
+
+	// Determine alert type
+	alertType := body.AlertType
+	if alertType == "" {
+		alertType = "price"
+	}
+
+	if alertType == "price" {
+		if body.Condition != "above" && body.Condition != "below" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "condition must be 'above' or 'below'"})
+			return
+		}
+		if body.Price <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "price must be positive"})
+			return
+		}
+	} else if alertType == "pct" {
+		if body.Condition != "pct_above" && body.Condition != "pct_below" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "condition must be 'pct_above' or 'pct_below'"})
+			return
+		}
+		if body.Threshold <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "threshold must be positive"})
+			return
+		}
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "alert_type must be 'price' or 'pct'"})
+		return
+	}
+
+	// Look up chat_id from user_chats
+	var chatID int64
+	err := h.db.QueryRow(`SELECT chat_id FROM user_chats WHERE user_id = ?`, body.UserID).Scan(&chatID)
+	if err == sql.ErrNoRows {
+		connectURL := fmt.Sprintf("https://t.me/%s?start=connect_%d", h.botName, body.UserID)
+		c.JSON(http.StatusPaymentRequired, gin.H{
+			"error":       "not_connected",
+			"connect_url": connectURL,
+		})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	result, err := h.db.Exec(
-		`INSERT INTO alerts (user_id, chat_id, symbol, condition, price) VALUES (?, ?, ?, ?, ?)`,
-		body.UserID, body.ChatID, body.Symbol, body.Condition, body.Price,
+		`INSERT INTO alerts (user_id, chat_id, symbol, condition, price, alert_type, threshold) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		body.UserID, chatID, body.Symbol, body.Condition, body.Price, alertType, body.Threshold,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -55,7 +100,7 @@ func (h *AlertHandler) List(c *gin.Context) {
 	}
 
 	rows, err := h.db.Query(
-		`SELECT id, user_id, chat_id, symbol, condition, price, active, triggered, created_at
+		`SELECT id, user_id, chat_id, symbol, condition, price, alert_type, threshold, active, triggered, created_at
 		 FROM alerts WHERE user_id = ? ORDER BY created_at DESC`,
 		userID,
 	)
@@ -68,7 +113,7 @@ func (h *AlertHandler) List(c *gin.Context) {
 	alerts := []models.Alert{}
 	for rows.Next() {
 		var a models.Alert
-		if err := rows.Scan(&a.ID, &a.UserID, &a.ChatID, &a.Symbol, &a.Condition, &a.Price, &a.Active, &a.Triggered, &a.CreatedAt); err != nil {
+		if err := rows.Scan(&a.ID, &a.UserID, &a.ChatID, &a.Symbol, &a.Condition, &a.Price, &a.AlertType, &a.Threshold, &a.Active, &a.Triggered, &a.CreatedAt); err != nil {
 			continue
 		}
 		alerts = append(alerts, a)

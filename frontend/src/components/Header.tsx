@@ -1,14 +1,18 @@
 import { useCryptoStore } from '../store/cryptoStore'
 import { useAlertStore } from '../store/alertStore'
+import { usePortfolioStore } from '../store/portfolioStore'
+
+type Tab = 'market' | 'watchlist' | 'portfolio' | 'alerts'
 
 interface HeaderProps {
-  activeTab: 'market' | 'watchlist' | 'alerts'
-  onTabChange: (tab: 'market' | 'watchlist' | 'alerts') => void
+  activeTab: Tab
+  onTabChange: (tab: Tab) => void
 }
 
 export function Header({ activeTab, onTabChange }: HeaderProps) {
   const { wsConnected, watchlist } = useCryptoStore()
   const { alerts } = useAlertStore()
+  const { holdings } = usePortfolioStore()
   const activeAlerts = alerts.filter((a) => a.active && !a.triggered).length
 
   return (
@@ -32,7 +36,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
         <div className="flex gap-1 bg-bg-secondary rounded-xl p-1">
           <button
             onClick={() => onTabChange('market')}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
               activeTab === 'market'
                 ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/20'
                 : 'text-text-secondary hover:text-text-primary'
@@ -42,15 +46,15 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
           </button>
           <button
             onClick={() => onTabChange('watchlist')}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1 ${
               activeTab === 'watchlist'
                 ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/20'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            Watchlist
+            Watch
             {watchlist.length > 0 && (
-              <span className={`text-xs rounded-full px-1.5 py-0.5 font-bold ${
+              <span className={`text-xs rounded-full px-1 py-0.5 font-bold leading-none ${
                 activeTab === 'watchlist' ? 'bg-white/20' : 'bg-accent-blue/20 text-accent-blue'
               }`}>
                 {watchlist.length}
@@ -58,8 +62,25 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
             )}
           </button>
           <button
+            onClick={() => onTabChange('portfolio')}
+            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1 ${
+              activeTab === 'portfolio'
+                ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/20'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            Portfolio
+            {holdings.length > 0 && (
+              <span className={`text-xs rounded-full px-1 py-0.5 font-bold leading-none ${
+                activeTab === 'portfolio' ? 'bg-white/20' : 'bg-accent-blue/20 text-accent-blue'
+              }`}>
+                {holdings.length}
+              </span>
+            )}
+          </button>
+          <button
             onClick={() => onTabChange('alerts')}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1 ${
               activeTab === 'alerts'
                 ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/20'
                 : 'text-text-secondary hover:text-text-primary'
@@ -67,7 +88,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
           >
             Alerts
             {activeAlerts > 0 && (
-              <span className={`text-xs rounded-full px-1.5 py-0.5 font-bold ${
+              <span className={`text-xs rounded-full px-1 py-0.5 font-bold leading-none ${
                 activeTab === 'alerts' ? 'bg-white/20' : 'bg-accent-blue/20 text-accent-blue'
               }`}>
                 {activeAlerts}

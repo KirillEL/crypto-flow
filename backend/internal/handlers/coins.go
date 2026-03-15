@@ -51,6 +51,20 @@ func (h *CoinHandler) GetCoins(c *gin.Context) {
 	c.JSON(http.StatusOK, coins)
 }
 
+func (h *CoinHandler) Search(c *gin.Context) {
+	q := c.Query("q")
+	if len(q) < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "q is required"})
+		return
+	}
+	results, err := h.svc.SearchCoins(q)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, results)
+}
+
 func (h *CoinHandler) GetCandles(c *gin.Context) {
 	symbol := c.Param("symbol")
 	interval := c.DefaultQuery("interval", "1h")

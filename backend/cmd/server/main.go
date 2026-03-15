@@ -27,9 +27,22 @@ func main() {
 	}
 	defer db.Close()
 
+	// Config
+	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
+	botName := os.Getenv("TELEGRAM_BOT_NAME")   // e.g. "CryptoFlowBot"
+	appName := os.Getenv("TELEGRAM_APP_NAME")   // e.g. "app"
+	webhookURL := os.Getenv("TELEGRAM_WEBHOOK_URL") // e.g. "https://cryptoflow.elertka.tech/bot/webhook"
+
 	// Services
 	binanceSvc := services.NewBinanceService()
-	telegramSvc := services.NewTelegramService(os.Getenv("TELEGRAM_BOT_TOKEN"))
+	telegramSvc := services.NewTelegramService(botToken)
+
+	// Register webhook with Telegram
+	if webhookURL != "" {
+		if err := telegramSvc.SetWebhook(webhookURL); err != nil {
+			log.Printf("Warning: failed to set webhook: %v", err)
+		}
+	}
 
 	// Alert monitor (background goroutine)
 	monitor := services.NewAlertMonitor(db, binanceSvc, telegramSvc)
@@ -37,7 +50,10 @@ func main() {
 
 	// Handlers
 	coinHandler := handlers.NewCoinHandler(binanceSvc)
-	alertHandler := handlers.NewAlertHandler(db)
+	alertHandler := handlers.NewAlertHandler(db, botName, appName)
+	portfolioHandler := handlers.NewPortfolioHandler(db)
+	webhookHandler := handlers.NewWebhookHandler(db, telegramSvc, botName, appName)
+	marketHandler := handlers.NewMarketHandler()
 
 	r := gin.New()
 	r.Use(gin.Logger())
@@ -48,15 +64,28 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	// Telegram bot webhook (no rate limit)
+	r.POST("/bot/webhook", webhookHandler.Handle)
+
 	api := r.Group("/api")
 	{
 		api.GET("/coins", coinHandler.GetCoins)
 		api.GET("/coins/:symbol/candles", coinHandler.GetCandles)
+		api.GET("/search", coinHandler.Search)
 
 		api.POST("/alerts", alertHandler.Create)
 		api.GET("/alerts", alertHandler.List)
 		api.DELETE("/alerts/:id", alertHandler.Delete)
 		api.PATCH("/alerts/:id/reset", alertHandler.Reset)
+
+		api.GET("/portfolio", portfolioHandler.List)
+		api.POST("/portfolio", portfolioHandler.Create)
+		api.PUT("/portfolio/:id", portfolioHandler.Update)
+		api.DELETE("/portfolio/:id", portfolioHandler.Delete)
+
+		api.GET("/user/connected", webhookHandler.CheckConnection)
+
+		api.GET("/market", marketHandler.Get)
 	}
 
 	port := os.Getenv("PORT")

@@ -38,9 +38,28 @@ export interface Alert {
   user_id: number
   chat_id: number
   symbol: string
-  condition: 'above' | 'below'
+  condition: 'above' | 'below' | 'pct_above' | 'pct_below'
   price: number
+  alert_type: 'price' | 'pct'
+  threshold: number
   active: boolean
   triggered: boolean
   created_at: string
+}
+
+export interface Holding {
+  id: number
+  user_id: number
+  symbol: string
+  amount: number
+  entry_price: number
+  created_at: string
+}
+
+export interface MarketOverview {
+  total_market_cap: number
+  market_cap_change_24h: number
+  btc_dominance: number
+  fear_greed_value: string
+  fear_greed_label: string
 }
