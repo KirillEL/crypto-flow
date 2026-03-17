@@ -20,8 +20,8 @@ function AlertCard({ alert, onDelete, onReset }: { alert: Alert; onDelete: () =>
   const isPct = alert.alert_type === 'pct'
   const condLabel = isPct
     ? (alert.condition === 'pct_above' ? `▲ +${alert.threshold}%` : `▼ -${alert.threshold}%`)
-    : (alert.condition === 'above' ? '▲ выше' : '▼ ниже')
-  const valueLabel = isPct ? `24ч изм. ${alert.condition === 'pct_above' ? '+' : '-'}${alert.threshold}%` : `$${formatPrice(alert.price)}`
+    : (alert.condition === 'above' ? '▲ above' : '▼ below')
+  const valueLabel = isPct ? `24h chg. ${alert.condition === 'pct_above' ? '+' : '-'}${alert.threshold}%` : `$${formatPrice(alert.price)}`
 
   return (
     <div className={`bg-bg-secondary rounded-2xl p-4 flex flex-col gap-3 border ${alert.triggered ? 'border-accent-red/40' : 'border-border'}`}>
@@ -39,7 +39,7 @@ function AlertCard({ alert, onDelete, onReset }: { alert: Alert; onDelete: () =>
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
           alert.triggered ? 'bg-accent-red/20 text-accent-red' : 'bg-accent-blue/15 text-accent-blue'
         }`}>
-          {alert.triggered ? 'Сработал' : 'Активен'}
+          {alert.triggered ? 'Triggered' : 'Active'}
         </span>
       </div>
 
@@ -53,14 +53,14 @@ function AlertCard({ alert, onDelete, onReset }: { alert: Alert; onDelete: () =>
             onClick={onReset}
             className="flex-1 py-2 rounded-xl text-sm font-medium bg-accent-blue/15 text-accent-blue hover:bg-accent-blue/25 transition-colors"
           >
-            Сбросить
+            Reset
           </button>
         )}
         <button
           onClick={onDelete}
           className="flex-1 py-2 rounded-xl text-sm font-medium bg-accent-red/10 text-accent-red hover:bg-accent-red/20 transition-colors"
         >
-          Удалить
+          Delete
         </button>
       </div>
     </div>
@@ -73,15 +73,15 @@ function ConnectBotBanner({ connectUrl }: { connectUrl: string }) {
       <div className="flex items-center gap-2">
         <span className="text-xl">🤖</span>
         <div>
-          <p className="text-text-primary font-semibold text-sm">Подключите бота</p>
-          <p className="text-text-muted text-xs mt-0.5">Чтобы получать уведомления в Telegram</p>
+          <p className="text-text-primary font-semibold text-sm">Connect Bot</p>
+          <p className="text-text-muted text-xs mt-0.5">To receive price alerts in Telegram</p>
         </div>
       </div>
       <button
         onClick={() => window.Telegram?.WebApp?.openTelegramLink(connectUrl)}
         className="w-full py-2.5 rounded-xl bg-accent-blue text-white text-sm font-semibold"
       >
-        Подключить бота →
+        Connect Bot →
       </button>
     </div>
   )
@@ -104,10 +104,10 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
 
     if (alertType === 'price') {
       const priceNum = parseFloat(price)
-      if (!priceNum || priceNum <= 0) { hapticError(); setError('Введите корректную цену'); return }
+      if (!priceNum || priceNum <= 0) { hapticError(); setError('Enter a valid price'); return }
     } else {
       const thr = parseFloat(threshold)
-      if (!thr || thr <= 0) { hapticError(); setError('Введите корректный процент'); return }
+      if (!thr || thr <= 0) { hapticError(); setError('Enter a valid percentage'); return }
     }
 
     setLoading(true)
@@ -139,13 +139,13 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-bg-secondary w-full max-w-md rounded-t-3xl p-6 pb-10 flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-text-primary font-bold text-lg">Новый алерт</h2>
+          <h2 className="text-text-primary font-bold text-lg">New Alert</h2>
           <button onClick={onClose} className="text-text-muted text-xl leading-none">✕</button>
         </div>
 
         {/* Symbol */}
         <div>
-          <label className="text-text-muted text-xs mb-1.5 block">Монета</label>
+          <label className="text-text-muted text-xs mb-1.5 block">Coin</label>
           <div className="grid grid-cols-5 gap-1.5">
             {SYMBOLS.map((s) => (
               <button
@@ -163,7 +163,7 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
 
         {/* Alert type */}
         <div>
-          <label className="text-text-muted text-xs mb-1.5 block">Тип алерта</label>
+          <label className="text-text-muted text-xs mb-1.5 block">Alert Type</label>
           <div className="flex gap-2">
             {(['price', 'pct'] as const).map((t) => (
               <button
@@ -173,7 +173,7 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
                   alertType === t ? 'bg-accent-blue text-white' : 'bg-bg-primary text-text-secondary hover:text-text-primary'
                 }`}
               >
-                {t === 'price' ? '💰 По цене' : '📊 По % изм.'}
+                {t === 'price' ? '💰 Price' : '📊 % Change'}
               </button>
             ))}
           </div>
@@ -182,7 +182,7 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
         {/* Condition */}
         <div>
           <label className="text-text-muted text-xs mb-1.5 block">
-            {alertType === 'pct' ? 'Направление' : 'Условие'}
+            {alertType === 'pct' ? 'Direction' : 'Condition'}
           </label>
           <div className="flex gap-2">
             {(['above', 'below'] as const).map((c) => (
@@ -196,8 +196,8 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
                 }`}
               >
                 {alertType === 'pct'
-                  ? (c === 'above' ? '▲ Рост' : '▼ Падение')
-                  : (c === 'above' ? '▲ Выше' : '▼ Ниже')}
+                  ? (c === 'above' ? '▲ Rise' : '▼ Drop')
+                  : (c === 'above' ? '▲ Above' : '▼ Below')}
               </button>
             ))}
           </div>
@@ -206,7 +206,7 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
         {/* Value input */}
         {alertType === 'price' ? (
           <div>
-            <label className="text-text-muted text-xs mb-1.5 block">Цена ($)</label>
+            <label className="text-text-muted text-xs mb-1.5 block">Price ($)</label>
             <input
               type="number"
               value={price}
@@ -217,7 +217,7 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
           </div>
         ) : (
           <div>
-            <label className="text-text-muted text-xs mb-1.5 block">Порог изменения (%)</label>
+            <label className="text-text-muted text-xs mb-1.5 block">Change Threshold (%)</label>
             <input
               type="number"
               value={threshold}
@@ -226,7 +226,7 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
               className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-text-primary placeholder-text-muted text-base focus:outline-none focus:border-accent-blue"
             />
             <p className="text-text-muted text-xs mt-1">
-              Уведомить если 24ч изменение {condition === 'above' ? 'превысит' : 'упадёт ниже'} {threshold || '0'}%
+              Notify when 24h change {condition === 'above' ? 'exceeds' : 'drops below'} {threshold || '0'}%
             </p>
           </div>
         )}
@@ -235,7 +235,7 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
 
         {connectUrl && !BOT_NAME && (
           <p className="text-text-muted text-xs text-center">
-            Для алертов нужно <button onClick={() => window.Telegram?.WebApp?.openTelegramLink(connectUrl)} className="text-accent-blue underline">подключить бота</button>
+            Alerts require <button onClick={() => window.Telegram?.WebApp?.openTelegramLink(connectUrl)} className="text-accent-blue underline">connecting the bot</button>
           </p>
         )}
 
@@ -244,7 +244,7 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
           disabled={loading}
           className="w-full py-3.5 rounded-2xl bg-accent-blue text-white font-semibold text-base disabled:opacity-50 transition-opacity"
         >
-          {loading ? 'Создание...' : 'Создать алерт'}
+          {loading ? 'Creating...' : 'Create Alert'}
         </button>
       </div>
     </div>
@@ -274,7 +274,7 @@ export function Alerts() {
   return (
     <div className="px-4 pt-4 pb-24">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-text-primary font-bold text-xl">Алерты</h1>
+        <h1 className="text-text-primary font-bold text-xl">Alerts</h1>
         <button
           onClick={() => setShowModal(true)}
           className="w-9 h-9 rounded-xl bg-accent-blue flex items-center justify-center text-white text-xl font-light shadow-lg shadow-accent-blue/30"
@@ -283,6 +283,12 @@ export function Alerts() {
         </button>
       </div>
 
+      {!BOT_NAME && (
+        <div className="bg-accent-yellow/10 border border-accent-yellow/30 rounded-2xl p-4 mb-4 flex items-start gap-2">
+          <span className="text-xl">⚠️</span>
+          <p className="text-text-secondary text-sm">Bot not configured. Set <code className="text-accent-yellow">VITE_TELEGRAM_BOT_NAME</code> to enable alerts.</p>
+        </div>
+      )}
       {connected === false && connectUrl && <ConnectBotBanner connectUrl={connectUrl} />}
 
       {loading && <AlertSkeleton />}
@@ -290,8 +296,8 @@ export function Alerts() {
       {!loading && alerts.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <span className="text-5xl">🔔</span>
-          <p className="text-text-secondary font-medium">Нет алертов</p>
-          <p className="text-text-muted text-sm text-center">Нажмите + чтобы следить за ценой монеты</p>
+          <p className="text-text-secondary font-medium">No alerts</p>
+          <p className="text-text-muted text-sm text-center">Tap + to track a coin's price</p>
         </div>
       )}
 
@@ -305,7 +311,7 @@ export function Alerts() {
 
       {triggered.length > 0 && (
         <>
-          <p className="text-text-muted text-xs font-medium mb-2 mt-2">Сработавшие</p>
+          <p className="text-text-muted text-xs font-medium mb-2 mt-2">Triggered</p>
           <div className="flex flex-col gap-3">
             {triggered.map((a) => (
               <AlertCard key={a.id} alert={a} onDelete={() => deleteAlert(a.id)} onReset={() => resetAlert(a.id)} />

@@ -22,6 +22,8 @@ export function CoinDetail() {
   const { coins, watchlist, toggleWatchlist, selectedTimeFrame, setTimeFrame } = useCryptoStore()
   const [candles, setCandles] = useState<Candle[]>([])
   const [loadingChart, setLoadingChart] = useState(false)
+  const [chartError, setChartError] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [externalCoin, setExternalCoin] = useState<Coin | null>(null)
   const [notFound, setNotFound] = useState(false)
 
@@ -46,13 +48,14 @@ export function CoinDetail() {
   const fetchCandles = useCallback(async (tf: TimeFrame) => {
     if (!symbol) return
     setLoadingChart(true)
+    setChartError(false)
     try {
       const res = await fetch(`${API_BASE}/coins/${symbol}/candles?interval=${tf}`)
       if (!res.ok) throw new Error('Failed to fetch candles')
       const data: Candle[] = await res.json()
       setCandles(data)
     } catch {
-      // fallback: empty chart
+      setChartError(true)
     } finally {
       setLoadingChart(false)
     }
@@ -71,22 +74,24 @@ export function CoinDetail() {
     if (!coin || !symbol) return
     const pct = coin.priceChangePercent24h
     const sign = pct >= 0 ? '+' : ''
-    const text = `${coin.symbol} $${formatPrice(coin.price)} (${sign}${pct.toFixed(2)}%) — смотри в CryptoFlow`
+    const text = `${coin.symbol} $${formatPrice(coin.price)} (${sign}${pct.toFixed(2)}%) — check CryptoFlow`
 
     if (BOT_NAME) {
       const url = `https://t.me/share/url?url=https://t.me/${BOT_NAME}/${APP_NAME}?startapp=coin_${symbol}&text=${encodeURIComponent(text)}`
       window.Telegram?.WebApp?.openTelegramLink(url)
     } else {
-      // fallback: copy to clipboard
-      navigator.clipboard?.writeText(text).catch(() => {})
+      navigator.clipboard?.writeText(text).then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }).catch(() => {})
     }
   }
 
   if (notFound) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <p className="text-text-muted">Монета не найдена</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-accent-blue text-sm">Назад</button>
+        <p className="text-text-muted">Coin not found</p>
+        <button onClick={() => navigate(-1)} className="mt-4 text-accent-blue text-sm">Go back</button>
       </div>
     )
   }
@@ -95,7 +100,7 @@ export function CoinDetail() {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <div className="w-10 h-10 rounded-full border-2 border-accent-blue border-t-transparent animate-spin mb-4" />
-        <p className="text-text-muted text-sm">Загрузка...</p>
+        <p className="text-text-muted text-sm">Loading...</p>
       </div>
     )
   }
@@ -130,12 +135,16 @@ export function CoinDetail() {
         {/* Share button */}
         <button
           onClick={handleShare}
-          className="w-8 h-8 rounded-xl bg-bg-card flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
-          title="Поделиться"
+          className="h-8 rounded-xl bg-bg-card flex items-center justify-center text-text-muted hover:text-text-primary transition-colors px-2 gap-1"
+          title="Share"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-          </svg>
+          {copied ? (
+            <span className="text-accent-green text-xs font-medium">Copied!</span>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+          )}
         </button>
 
         {/* Watchlist star */}
@@ -173,6 +182,11 @@ export function CoinDetail() {
         {/* Chart */}
         {loadingChart ? (
           <div className="h-72 bg-bg-card rounded-2xl border border-border animate-pulse" />
+        ) : chartError ? (
+          <div className="h-72 bg-bg-card rounded-2xl border border-border flex flex-col items-center justify-center gap-2">
+            <p className="text-text-muted text-sm">Chart unavailable</p>
+            <button onClick={() => fetchCandles(selectedTimeFrame)} className="text-accent-blue text-xs">Retry</button>
+          </div>
         ) : (
           <PriceChart
             candles={candles}

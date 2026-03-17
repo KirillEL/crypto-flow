@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { Holding } from '../types'
 import { STORAGE_KEYS } from '../constants/storage'
+import { useToast } from '../components/Toast'
 
 const API = import.meta.env.VITE_API_URL || '/api'
 
@@ -41,8 +42,11 @@ export const usePortfolioStore = create<PortfolioStore>((set, get) => ({
 
     try {
       const res = await fetch(`${API}/portfolio?user_id=${userId}`)
+      if (!res.ok) throw new Error('Failed to load portfolio')
       const data = await res.json()
       set({ holdings: Array.isArray(data) ? data : [] })
+    } catch (e) {
+      useToast.getState().show((e as Error).message, 'error')
     } finally {
       set({ loading: false })
     }
@@ -68,11 +72,12 @@ export const usePortfolioStore = create<PortfolioStore>((set, get) => ({
       return
     }
 
-    await fetch(`${API}/portfolio`, {
+    const res = await fetch(`${API}/portfolio`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: userId, symbol, amount, entry_price }),
     })
+    if (!res.ok) throw new Error('Failed to add holding')
     await get().fetchHoldings()
   },
 
@@ -88,11 +93,12 @@ export const usePortfolioStore = create<PortfolioStore>((set, get) => ({
       return
     }
 
-    await fetch(`${API}/portfolio/${id}`, {
+    const res = await fetch(`${API}/portfolio/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ amount, entry_price }),
     })
+    if (!res.ok) throw new Error('Failed to update holding')
     set((s) => ({ holdings: s.holdings.map((h) => h.id === id ? { ...h, amount, entry_price } : h) }))
   },
 
@@ -108,7 +114,8 @@ export const usePortfolioStore = create<PortfolioStore>((set, get) => ({
       return
     }
 
-    await fetch(`${API}/portfolio/${id}`, { method: 'DELETE' })
+    const res = await fetch(`${API}/portfolio/${id}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error('Failed to delete holding')
     set((s) => ({ holdings: s.holdings.filter((h) => h.id !== id) }))
   },
 }))

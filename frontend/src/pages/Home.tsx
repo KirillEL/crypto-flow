@@ -8,6 +8,7 @@ import { useWebSocket } from '../hooks/useWebSocket'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import { PullIndicator } from '../components/PullIndicator'
 import type { Coin } from '../types'
+import { useToast } from '../components/Toast'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 const WS_SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'LINK', 'UNI', 'ATOM', 'LTC', 'TRX']
@@ -16,6 +17,7 @@ export function Home() {
   const { coins, setCoins, setLoading, setError, searchQuery, sortField, sortOrder, isLoading, error } = useCryptoStore()
   const [searchResults, setSearchResults] = useState<Coin[]>([])
   const searchDebounce = useRef<ReturnType<typeof setTimeout>>()
+  const showToast = useToast((s) => s.show)
 
   useWebSocket(WS_SYMBOLS)
 
@@ -57,7 +59,7 @@ export function Home() {
           setSearchResults(data.filter((c) => !localSymbols.has(c.symbol)))
         }
       } catch {
-        // silently ignore search errors
+        showToast('Search failed. Please try again.', 'error')
       }
     }, 350)
     return () => clearTimeout(searchDebounce.current)
@@ -147,7 +149,7 @@ export function Home() {
           <>
             {filteredCoins.length > 0 && (
               <div className="px-4 py-2">
-                <span className="text-text-muted text-xs font-medium">Другие монеты</span>
+                <span className="text-text-muted text-xs font-medium">Other coins</span>
               </div>
             )}
             {searchResults.map((coin) => (
@@ -161,7 +163,7 @@ export function Home() {
             <svg className="w-12 h-12 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <p className="text-sm">Монета не найдена</p>
+            <p className="text-sm">No coins found</p>
           </div>
         )}
       </div>

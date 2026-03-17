@@ -40,7 +40,7 @@ export function MarketBanner() {
       <div className="flex gap-2 min-w-max">
         {data.total_market_cap > 0 && (
           <div className="bg-bg-secondary border border-border rounded-xl px-3 py-2 flex-shrink-0">
-            <p className="text-text-muted text-xs mb-0.5">Капитализация</p>
+            <p className="text-text-muted text-xs mb-0.5">Market Cap</p>
             <div className="flex items-center gap-1.5">
               <span className="text-text-primary text-sm font-semibold">{formatMarketCap(data.total_market_cap)}</span>
               {capChange !== 0 && (

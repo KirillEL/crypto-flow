@@ -5,18 +5,18 @@ import { useHaptic } from '../hooks/useTelegram'
 const SLIDES = [
   {
     icon: '👋',
-    title: (name: string) => `Привет, ${name}!`,
-    desc: 'CryptoFlow — твой личный крипто-монитор прямо в Telegram. Цены, графики, уведомления — всё в одном месте.',
+    title: (name: string) => `Hello, ${name}!`,
+    desc: 'CryptoFlow is your personal crypto monitor inside Telegram. Prices, charts, and alerts — all in one place.',
   },
   {
     icon: '📊',
-    title: () => 'Живые цены и графики',
-    desc: 'Следи за 15+ монетами в реальном времени. Свечные графики, спарклайны и 7 таймфреймов.',
+    title: () => 'Live Prices & Charts',
+    desc: 'Track 15+ coins in real time. Candlestick charts, sparklines, and 7 timeframes.',
   },
   {
     icon: '🔔',
-    title: () => 'Умные алерты',
-    desc: 'Устанавливай ценовые уведомления — бот пришлёт сообщение как только цена достигнет нужного уровня.',
+    title: () => 'Smart Alerts',
+    desc: 'Set price alerts — the bot will notify you the moment a coin hits your target.',
   },
 ]
 
@@ -25,7 +25,7 @@ interface OnboardingModalProps {
   userName?: string
 }
 
-export function OnboardingModal({ onDone, userName = 'друг' }: OnboardingModalProps) {
+export function OnboardingModal({ onDone, userName = 'there' }: OnboardingModalProps) {
   const [slide, setSlide] = useState(0)
   const { tapLight, success } = useHaptic()
 
@@ -53,7 +53,7 @@ export function OnboardingModal({ onDone, userName = 'друг' }: OnboardingMod
       {/* Skip button */}
       <div className="flex justify-end px-5 pt-5">
         <button onClick={skip} className="text-text-muted text-sm px-3 py-1.5 rounded-lg hover:bg-bg-secondary transition-colors">
-          Пропустить
+          Skip
         </button>
       </div>
 
@@ -86,7 +86,7 @@ export function OnboardingModal({ onDone, userName = 'друг' }: OnboardingMod
           onClick={next}
           className="w-full py-4 rounded-2xl bg-accent-blue text-white font-semibold text-base shadow-lg shadow-accent-blue/30 active:scale-95 transition-transform"
         >
-          {isLast ? 'Начать' : 'Далее'}
+          {isLast ? 'Get Started' : 'Next'}
         </button>
       </div>
     </div>

@@ -79,7 +79,7 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
     }
     if (!res.ok) {
       const data = await res.json()
-      return { error: data.error ?? 'Ошибка при создании алерта' }
+      return { error: data.error ?? 'Failed to create alert' }
     }
     await get().fetchAlerts()
     return {}

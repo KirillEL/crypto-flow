@@ -41,6 +41,7 @@ export const useWebSocket = (symbols: string[]) => {
     }
 
     wsRef.current.onerror = () => {
+      setWsConnected(false)
       wsRef.current?.close()
     }
   }, [symbols.join(','), updateCoinPrice, setWsConnected])

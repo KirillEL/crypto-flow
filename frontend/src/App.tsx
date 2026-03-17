@@ -9,6 +9,7 @@ import { Portfolio } from './pages/Portfolio'
 import { useTelegram } from './hooks/useTelegram'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { OnboardingModal } from './components/OnboardingModal'
+import { Toast } from './components/Toast'
 import { STORAGE_KEYS } from './constants/storage'
 
 type Tab = 'market' | 'watchlist' | 'portfolio' | 'alerts'
@@ -58,6 +59,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary">
       <MainLayout />
+      <Toast />
       <main>
         <ErrorBoundary>
           <div key={location.pathname} className="animate-slide-left">
