@@ -84,6 +84,8 @@ func (h *WebhookHandler) handleMessage(msg *tgMessage) {
 	switch command {
 	case "/start":
 		h.handleStart(msg, parts)
+	case "/link":
+		h.handleLink(msg, parts)
 	case "/price":
 		h.handlePrice(msg, parts)
 	}
@@ -131,6 +133,32 @@ func (h *WebhookHandler) handleStart(msg *tgMessage, parts []string) {
 
 	h.telegram.SendMessage(msg.Chat.ID,
 		fmt.Sprintf("👋 <b>Привет!</b>\n\nCryptoFlow — отслеживай цены 200+ монет в реальном времени.\n\n<a href=\"https://t.me/%s/%s\">Открыть приложение</a>", h.botName, h.appName),
+	)
+}
+
+func (h *WebhookHandler) handleLink(msg *tgMessage, parts []string) {
+	// /link {user_id} — links alerts to current chat (personal or group)
+	if len(parts) < 2 {
+		h.telegram.SendMessage(msg.Chat.ID, "Usage: /link {your_user_id}\n\nFind your ID in the CryptoFlow app → Alerts tab.")
+		return
+	}
+	var userID int64
+	if _, err := fmt.Sscanf(parts[1], "%d", &userID); err != nil || userID == 0 {
+		h.telegram.SendMessage(msg.Chat.ID, "❌ Invalid user ID. Copy it from the CryptoFlow app.")
+		return
+	}
+	_, err := h.db.Exec(
+		`INSERT INTO user_chats (user_id, chat_id) VALUES (?, ?)
+		 ON CONFLICT(user_id) DO UPDATE SET chat_id = excluded.chat_id`,
+		userID, msg.Chat.ID,
+	)
+	if err != nil {
+		log.Printf("Webhook: handleLink failed: %v", err)
+		h.telegram.SendMessage(msg.Chat.ID, "❌ Failed to link. Please try again.")
+		return
+	}
+	h.telegram.SendMessage(msg.Chat.ID,
+		fmt.Sprintf("✅ <b>Linked!</b>\n\nAlerts will now be sent to this chat.\n\n<a href=\"https://t.me/%s/%s\">Open CryptoFlow</a>", h.botName, h.appName),
 	)
 }
 

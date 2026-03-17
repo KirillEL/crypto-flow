@@ -67,22 +67,67 @@ function AlertCard({ alert, onDelete, onReset }: { alert: Alert; onDelete: () =>
   )
 }
 
-function ConnectBotBanner({ connectUrl }: { connectUrl: string }) {
+function ConnectBotBanner({ connectUrl, userId }: { connectUrl: string; userId: number }) {
+  const [copied, setCopied] = useState(false)
+  const [tab, setTab] = useState<'personal' | 'group'>('personal')
+
+  const copyUserId = () => {
+    navigator.clipboard?.writeText(String(userId)).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
   return (
     <div className="bg-accent-blue/10 border border-accent-blue/30 rounded-2xl p-4 flex flex-col gap-3 mb-4">
       <div className="flex items-center gap-2">
         <span className="text-xl">🤖</span>
         <div>
           <p className="text-text-primary font-semibold text-sm">Connect Bot</p>
-          <p className="text-text-muted text-xs mt-0.5">To receive price alerts in Telegram</p>
+          <p className="text-text-muted text-xs mt-0.5">Choose where to receive alerts</p>
         </div>
       </div>
-      <button
-        onClick={() => window.Telegram?.WebApp?.openTelegramLink(connectUrl)}
-        className="w-full py-2.5 rounded-xl bg-accent-blue text-white text-sm font-semibold"
-      >
-        Connect Bot →
-      </button>
+
+      {/* Tab switcher */}
+      <div className="flex gap-1 bg-bg-primary rounded-xl p-1">
+        <button
+          onClick={() => setTab('personal')}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${tab === 'personal' ? 'bg-accent-blue text-white' : 'text-text-secondary'}`}
+        >
+          Personal chat
+        </button>
+        <button
+          onClick={() => setTab('group')}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${tab === 'group' ? 'bg-accent-blue text-white' : 'text-text-secondary'}`}
+        >
+          Group
+        </button>
+      </div>
+
+      {tab === 'personal' ? (
+        <button
+          onClick={() => window.Telegram?.WebApp?.openTelegramLink(connectUrl)}
+          className="w-full py-2.5 rounded-xl bg-accent-blue text-white text-sm font-semibold"
+        >
+          Open bot chat →
+        </button>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <p className="text-text-secondary text-xs leading-relaxed">
+            1. Add the bot to your group<br />
+            2. Send this command in the group:
+          </p>
+          <div className="bg-bg-primary rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+            <code className="text-accent-blue text-sm font-mono">/link {userId}</code>
+            <button
+              onClick={copyUserId}
+              className="text-xs text-text-muted hover:text-text-primary transition-colors shrink-0"
+            >
+              {copied ? '✓ Copied' : 'Copy'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -289,7 +334,7 @@ export function Alerts() {
           <p className="text-text-secondary text-sm">Bot not configured. Set <code className="text-accent-yellow">VITE_TELEGRAM_BOT_NAME</code> to enable alerts.</p>
         </div>
       )}
-      {connected === false && connectUrl && <ConnectBotBanner connectUrl={connectUrl} />}
+      {connected === false && connectUrl && <ConnectBotBanner connectUrl={connectUrl} userId={getUserId()} />}
 
       {loading && <AlertSkeleton />}
 
