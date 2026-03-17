@@ -4,6 +4,7 @@ import type { Coin } from '../types'
 import { formatPrice, formatPercent } from '../utils/format'
 import { Sparkline } from './Sparkline'
 import { useCryptoStore } from '../store/cryptoStore'
+import { useAlertStore } from '../store/alertStore'
 import { COIN_COLORS } from '../constants/coins'
 import { useHaptic } from '../hooks/useTelegram'
 
@@ -15,6 +16,7 @@ interface CoinCardProps {
 export const CoinCard = memo(({ coin, rank }: CoinCardProps) => {
   const navigate = useNavigate()
   const { watchlist, toggleWatchlist } = useCryptoStore()
+  const { setQuickAlertSymbol } = useAlertStore()
   const { tapLight, selectionChanged } = useHaptic()
   const isPositive = coin.priceChangePercent24h >= 0
   const isWatched = watchlist.includes(coin.symbol)
@@ -64,6 +66,20 @@ export const CoinCard = memo(({ coin, rank }: CoinCardProps) => {
           {isPositive ? '▲' : '▼'} {formatPercent(Math.abs(coin.priceChangePercent24h))}
         </div>
       </div>
+
+      {/* Quick alert bell */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          tapLight()
+          setQuickAlertSymbol(coin.symbol)
+        }}
+        className="flex-shrink-0 p-1 rounded-lg hover:bg-bg-card transition-colors"
+      >
+        <svg className="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      </button>
 
       {/* Watchlist star */}
       <button

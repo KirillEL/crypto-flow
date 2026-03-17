@@ -9,8 +9,10 @@ import { Portfolio } from './pages/Portfolio'
 import { useTelegram } from './hooks/useTelegram'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { OnboardingModal } from './components/OnboardingModal'
+import { AddAlertModal } from './components/AddAlertModal'
 import { Toast } from './components/Toast'
 import { STORAGE_KEYS } from './constants/storage'
+import { useAlertStore } from './store/alertStore'
 
 type Tab = 'market' | 'watchlist' | 'portfolio' | 'alerts'
 
@@ -45,6 +47,18 @@ function MainLayout() {
   return <Header activeTab={getActiveTab()} onTabChange={handleTabChange} />
 }
 
+function QuickAlertModal() {
+  const { quickAlertSymbol, setQuickAlertSymbol } = useAlertStore()
+  if (!quickAlertSymbol) return null
+  return (
+    <AddAlertModal
+      onClose={() => setQuickAlertSymbol(null)}
+      connectUrl={null}
+      initialSymbol={quickAlertSymbol}
+    />
+  )
+}
+
 export default function App() {
   const { user } = useTelegram()
   const location = useLocation()
@@ -60,6 +74,7 @@ export default function App() {
     <div className="min-h-screen bg-bg-primary text-text-primary">
       <MainLayout />
       <Toast />
+      <QuickAlertModal />
       <main>
         <ErrorBoundary>
           <div key={location.pathname} className="animate-slide-left">

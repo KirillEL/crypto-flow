@@ -4,6 +4,7 @@ import { CoinCard } from '../components/CoinCard'
 import { SearchBar } from '../components/SearchBar'
 import { SortBar } from '../components/SortBar'
 import { MarketBanner } from '../components/MarketBanner'
+import { MarketMovers } from '../components/MarketMovers'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import { PullIndicator } from '../components/PullIndicator'
@@ -134,6 +135,7 @@ export function Home() {
     <div className="animate-fade-in" ref={bindEvents}>
       <PullIndicator pullProgress={pullProgress} isRefreshing={isRefreshing} />
       <MarketBanner />
+      <MarketMovers />
       <div className="pt-2">
         <SearchBar />
         <SortBar />

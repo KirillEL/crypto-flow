@@ -11,6 +11,8 @@ interface AlertStore {
   alerts: Alert[]
   loading: boolean
   connected: boolean | null  // null = not checked yet
+  quickAlertSymbol: string | null
+  setQuickAlertSymbol: (symbol: string | null) => void
   fetchAlerts: () => Promise<void>
   checkConnection: () => Promise<boolean>
   createAlert: (data: {
@@ -28,6 +30,8 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
   alerts: [],
   loading: false,
   connected: null,
+  quickAlertSymbol: null,
+  setQuickAlertSymbol: (symbol) => set({ quickAlertSymbol: symbol }),
 
   fetchAlerts: async () => {
     const userId = getUserId()

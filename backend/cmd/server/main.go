@@ -86,6 +86,7 @@ func main() {
 		api.GET("/user/connected", webhookHandler.CheckConnection)
 
 		api.GET("/market", marketHandler.Get)
+		api.GET("/market/movers", marketHandler.GetMovers)
 	}
 
 	port := os.Getenv("PORT")
