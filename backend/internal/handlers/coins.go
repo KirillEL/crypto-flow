@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,6 +15,25 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// coinToTag maps crypto symbols to CoinTelegraph RSS tag slugs
+var coinToTag = map[string]string{
+	"BTC":   "bitcoin",
+	"ETH":   "ethereum",
+	"BNB":   "bnb",
+	"SOL":   "solana",
+	"XRP":   "xrp",
+	"ADA":   "cardano",
+	"DOGE":  "dogecoin",
+	"AVAX":  "avalanche",
+	"DOT":   "polkadot",
+	"MATIC": "polygon",
+	"LINK":  "chainlink",
+	"UNI":   "uniswap",
+	"ATOM":  "cosmos",
+	"LTC":   "litecoin",
+	"TRX":   "tron",
+}
 
 type NewsArticle struct {
 	Title       string `json:"title"`
@@ -75,12 +94,28 @@ func (h *CoinHandler) GetNews(c *gin.Context) {
 	c.JSON(http.StatusOK, articles)
 }
 
+// rssItem represents a single CoinTelegraph RSS article
+type rssItem struct {
+	Title   string `xml:"title"`
+	Link    string `xml:"link"`
+	PubDate string `xml:"pubDate"`
+	Media   struct {
+		URL string `xml:"url,attr"`
+	} `xml:"http://search.yahoo.com/mrss/ content"`
+}
+
+type rssFeed struct {
+	Items []rssItem `xml:"channel>item"`
+}
+
 func (h *CoinHandler) fetchNews(symbol string) ([]NewsArticle, error) {
-	url := fmt.Sprintf(
-		"https://min-api.cryptocompare.com/data/v2/news/?categories=%s&sortOrder=popular&limit=10",
-		symbol,
-	)
-	resp, err := h.httpClient.Get(url)
+	tag, ok := coinToTag[symbol]
+	if !ok {
+		tag = strings.ToLower(symbol)
+	}
+
+	feedURL := fmt.Sprintf("https://cointelegraph.com/rss/tag/%s", tag)
+	resp, err := h.httpClient.Get(feedURL)
 	if err != nil {
 		return nil, err
 	}
@@ -90,37 +125,37 @@ func (h *CoinHandler) fetchNews(symbol string) ([]NewsArticle, error) {
 		return nil, err
 	}
 
-	var result struct {
-		Data []struct {
-			Title      string `json:"title"`
-			URL        string `json:"url"`
-			Source     string `json:"source"`
-			ImageURL   string `json:"imageurl"`
-			PublishedOn int64 `json:"published_on"`
-			SourceInfo struct {
-				Name string `json:"name"`
-			} `json:"source_info"`
-		} `json:"Data"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, fmt.Errorf("parse error: %w", err)
+	var feed rssFeed
+	if err := xml.Unmarshal(body, &feed); err != nil {
+		return nil, fmt.Errorf("rss parse error: %w", err)
 	}
 
-	articles := make([]NewsArticle, 0, len(result.Data))
-	for _, d := range result.Data {
-		sourceName := d.SourceInfo.Name
-		if sourceName == "" {
-			sourceName = d.Source
-		}
+	articles := make([]NewsArticle, 0, len(feed.Items))
+	for _, item := range feed.Items {
+		ts := parseRSSDate(item.PubDate)
 		articles = append(articles, NewsArticle{
-			Title:       d.Title,
-			URL:         d.URL,
-			Source:      sourceName,
-			ImageURL:    d.ImageURL,
-			PublishedAt: d.PublishedOn,
+			Title:       item.Title,
+			URL:         item.Link,
+			Source:      "CoinTelegraph",
+			ImageURL:    item.Media.URL,
+			PublishedAt: ts,
 		})
 	}
 	return articles, nil
+}
+
+func parseRSSDate(s string) int64 {
+	formats := []string{
+		time.RFC1123Z,
+		time.RFC1123,
+		"Mon, 02 Jan 2006 15:04:05 -0700",
+	}
+	for _, f := range formats {
+		if t, err := time.Parse(f, strings.TrimSpace(s)); err == nil {
+			return t.Unix()
+		}
+	}
+	return 0
 }
 
 func (h *CoinHandler) GetCoins(c *gin.Context) {
