@@ -16,6 +16,86 @@ const STAT_ITEM = ({ label, value }: { label: string; value: string }) => (
   </div>
 )
 
+interface NewsArticle {
+  title: string
+  url: string
+  source: string
+  image_url: string
+  published_at: number
+}
+
+function timeAgo(ts: number): string {
+  const diff = Math.floor((Date.now() / 1000) - ts)
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
+}
+
+function NewsFeed({ symbol }: { symbol: string }) {
+  const [articles, setArticles] = useState<NewsArticle[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    setLoading(true)
+    setError(false)
+    fetch(`${API_BASE}/coins/${symbol}/news`)
+      .then((r) => { if (!r.ok) throw new Error(); return r.json() })
+      .then((data) => setArticles(Array.isArray(data) ? data : []))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false))
+  }, [symbol])
+
+  if (loading) return (
+    <div className="flex flex-col gap-3 mt-2">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="bg-bg-card rounded-2xl p-4 animate-pulse">
+          <div className="h-3 w-24 bg-bg-secondary rounded mb-2" />
+          <div className="h-4 w-full bg-bg-secondary rounded mb-1" />
+          <div className="h-4 w-3/4 bg-bg-secondary rounded" />
+        </div>
+      ))}
+    </div>
+  )
+
+  if (error || articles.length === 0) return (
+    <div className="flex flex-col items-center py-16 text-text-muted">
+      <svg className="w-12 h-12 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+      </svg>
+      <p className="text-sm">{error ? 'Failed to load news' : 'No news available'}</p>
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col gap-3 mt-2">
+      {articles.map((a, i) => (
+        <button
+          key={i}
+          onClick={() => window.Telegram?.WebApp?.openLink(a.url)}
+          className="bg-bg-card rounded-2xl p-4 flex gap-3 text-left hover:bg-bg-hover active:bg-bg-hover transition-colors w-full border border-border/40"
+        >
+          {a.image_url && (
+            <img
+              src={a.image_url}
+              alt=""
+              className="w-16 h-16 rounded-xl object-cover flex-shrink-0 bg-bg-secondary"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-text-muted text-xs font-medium truncate">{a.source}</span>
+              <span className="text-text-muted text-xs flex-shrink-0">{timeAgo(a.published_at)}</span>
+            </div>
+            <p className="text-text-primary text-sm font-medium leading-snug line-clamp-3">{a.title}</p>
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function CoinDetail() {
   const { symbol } = useParams<{ symbol: string }>()
   const navigate = useNavigate()
@@ -26,6 +106,7 @@ export function CoinDetail() {
   const [copied, setCopied] = useState(false)
   const [externalCoin, setExternalCoin] = useState<Coin | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [activeTab, setActiveTab] = useState<'chart' | 'news'>('chart')
 
   const storeCoin = coins.find((c) => c.symbol === symbol)
   const coin = storeCoin ?? externalCoin
@@ -77,9 +158,11 @@ export function CoinDetail() {
     const text = `${coin.symbol} $${formatPrice(coin.price)} (${sign}${pct.toFixed(2)}%) — check CryptoFlow`
 
     if (BOT_NAME) {
-      const appUrl = `https://t.me/${BOT_NAME}/${APP_NAME}?startapp=coin_${symbol}`
-      const url = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(text)}`
-      window.Telegram?.WebApp?.openTelegramLink(url)
+      // Use ?startapp= without APP_NAME — opens the bot's main web app directly
+      // (works when bot has a web app set via BotFather /setmainwebapp)
+      const appUrl = `https://t.me/${BOT_NAME}?startapp=coin_${symbol}`
+      const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(text)}`
+      window.Telegram?.WebApp?.openTelegramLink(shareUrl)
     } else {
       navigator.clipboard?.writeText(text).then(() => {
         setCopied(true)
@@ -180,33 +263,55 @@ export function CoinDetail() {
           </div>
         </div>
 
-        {/* Chart */}
-        {loadingChart ? (
-          <div className="h-72 bg-bg-card rounded-2xl border border-border animate-pulse" />
-        ) : chartError ? (
-          <div className="h-72 bg-bg-card rounded-2xl border border-border flex flex-col items-center justify-center gap-2">
-            <p className="text-text-muted text-sm">Chart unavailable</p>
-            <button onClick={() => fetchCandles(selectedTimeFrame)} className="text-accent-blue text-xs">Retry</button>
-          </div>
-        ) : (
-          <PriceChart
-            candles={candles}
-            timeFrame={selectedTimeFrame}
-            onTimeFrameChange={handleTimeFrameChange}
-            isPositive={isPositive}
-          />
+        {/* Tab switcher */}
+        <div className="flex gap-1 bg-bg-card rounded-xl p-1">
+          {(['chart', 'news'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors capitalize ${
+                activeTab === tab ? 'bg-accent-blue text-white' : 'text-text-muted hover:text-text-secondary'
+              }`}
+            >
+              {tab === 'chart' ? 'Chart' : 'News'}
+            </button>
+          ))}
+        </div>
+
+        {/* Chart tab */}
+        {activeTab === 'chart' && (
+          <>
+            {loadingChart ? (
+              <div className="h-72 bg-bg-card rounded-2xl border border-border animate-pulse" />
+            ) : chartError ? (
+              <div className="h-72 bg-bg-card rounded-2xl border border-border flex flex-col items-center justify-center gap-2">
+                <p className="text-text-muted text-sm">Chart unavailable</p>
+                <button onClick={() => fetchCandles(selectedTimeFrame)} className="text-accent-blue text-xs">Retry</button>
+              </div>
+            ) : (
+              <PriceChart
+                candles={candles}
+                timeFrame={selectedTimeFrame}
+                onTimeFrameChange={handleTimeFrameChange}
+                isPositive={isPositive}
+              />
+            )}
+
+            {/* Stats */}
+            <div>
+              <h3 className="text-text-secondary text-xs font-semibold uppercase tracking-wider mb-2">Statistics</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <STAT_ITEM label="24h High" value={`$${formatPrice(coin.high24h)}`} />
+                <STAT_ITEM label="24h Low" value={`$${formatPrice(coin.low24h)}`} />
+                <STAT_ITEM label="24h Volume" value={formatVolume(coin.volume24h)} />
+                <STAT_ITEM label="24h Change" value={formatPercent(coin.priceChangePercent24h)} />
+              </div>
+            </div>
+          </>
         )}
 
-        {/* Stats */}
-        <div>
-          <h3 className="text-text-secondary text-xs font-semibold uppercase tracking-wider mb-2">Statistics</h3>
-          <div className="grid grid-cols-2 gap-2">
-            <STAT_ITEM label="24h High" value={`$${formatPrice(coin.high24h)}`} />
-            <STAT_ITEM label="24h Low" value={`$${formatPrice(coin.low24h)}`} />
-            <STAT_ITEM label="24h Volume" value={formatVolume(coin.volume24h)} />
-            <STAT_ITEM label="24h Change" value={formatPercent(coin.priceChangePercent24h)} />
-          </div>
-        </div>
+        {/* News tab */}
+        {activeTab === 'news' && symbol && <NewsFeed symbol={symbol} />}
       </div>
     </div>
   )

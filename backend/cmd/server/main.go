@@ -71,6 +71,7 @@ func main() {
 	{
 		api.GET("/coins", coinHandler.GetCoins)
 		api.GET("/coins/:symbol/candles", coinHandler.GetCandles)
+		api.GET("/coins/:symbol/news", coinHandler.GetNews)
 		api.GET("/search", coinHandler.Search)
 
 		api.POST("/alerts", alertHandler.Create)
