@@ -77,7 +77,8 @@ export function CoinDetail() {
     const text = `${coin.symbol} $${formatPrice(coin.price)} (${sign}${pct.toFixed(2)}%) — check CryptoFlow`
 
     if (BOT_NAME) {
-      const url = `https://t.me/share/url?url=https://t.me/${BOT_NAME}/${APP_NAME}?startapp=coin_${symbol}&text=${encodeURIComponent(text)}`
+      const appUrl = `https://t.me/${BOT_NAME}/${APP_NAME}?startapp=coin_${symbol}`
+      const url = `https://t.me/share/url?url=${encodeURIComponent(appUrl)}&text=${encodeURIComponent(text)}`
       window.Telegram?.WebApp?.openTelegramLink(url)
     } else {
       navigator.clipboard?.writeText(text).then(() => {

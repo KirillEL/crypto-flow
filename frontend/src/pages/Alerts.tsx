@@ -300,15 +300,16 @@ export function Alerts() {
   const { alerts, loading, connected, fetchAlerts, checkConnection, deleteAlert, resetAlert } = useAlertStore()
   const [showModal, setShowModal] = useState(false)
   const [connectUrl, setConnectUrl] = useState<string | null>(null)
+  const [showConnectBanner, setShowConnectBanner] = useState(false)
 
   useEffect(() => {
     fetchAlerts()
     const userId = getUserId()
     if (userId && BOT_NAME) {
       checkConnection().then((ok) => {
-        if (!ok) {
-          setConnectUrl(`https://t.me/${BOT_NAME}?start=connect_${userId}`)
-        }
+        const url = `https://t.me/${BOT_NAME}?start=connect_${userId}`
+        setConnectUrl(url)
+        if (!ok) setShowConnectBanner(true)
       })
     }
   }, [])
@@ -320,12 +321,22 @@ export function Alerts() {
     <div className="px-4 pt-4 pb-24">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-text-primary font-bold text-xl">Alerts</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="w-9 h-9 rounded-xl bg-accent-blue flex items-center justify-center text-white text-xl font-light shadow-lg shadow-accent-blue/30"
-        >
-          +
-        </button>
+        <div className="flex items-center gap-2">
+          {connected === true && BOT_NAME && (
+            <button
+              onClick={() => setShowConnectBanner((v) => !v)}
+              className="text-text-muted text-xs px-2 py-1.5 rounded-lg hover:bg-bg-secondary transition-colors"
+            >
+              Change chat
+            </button>
+          )}
+          <button
+            onClick={() => setShowModal(true)}
+            className="w-9 h-9 rounded-xl bg-accent-blue flex items-center justify-center text-white text-xl font-light shadow-lg shadow-accent-blue/30"
+          >
+            +
+          </button>
+        </div>
       </div>
 
       {!BOT_NAME && (
@@ -334,7 +345,7 @@ export function Alerts() {
           <p className="text-text-secondary text-sm">Bot not configured. Set <code className="text-accent-yellow">VITE_TELEGRAM_BOT_NAME</code> to enable alerts.</p>
         </div>
       )}
-      {connected === false && connectUrl && <ConnectBotBanner connectUrl={connectUrl} userId={getUserId()} />}
+      {showConnectBanner && connectUrl && <ConnectBotBanner connectUrl={connectUrl} userId={getUserId()} />}
 
       {loading && <AlertSkeleton />}
 
