@@ -3,15 +3,13 @@ import { usePortfolioStore } from '../store/portfolioStore'
 import { useCryptoStore } from '../store/cryptoStore'
 import { Holding } from '../types'
 import { formatPrice, formatVolume } from '../utils/format'
+import { COIN_COLORS, DEFAULT_SYMBOLS } from '../constants/coins'
+import { useHaptic } from '../hooks/useTelegram'
+import { PortfolioSkeleton } from '../components/skeletons/PortfolioSkeleton'
+import { usePullToRefresh } from '../hooks/usePullToRefresh'
+import { PullIndicator } from '../components/PullIndicator'
 
-const SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'LINK', 'UNI', 'ATOM', 'LTC', 'TRX']
-
-const COIN_COLORS: Record<string, string> = {
-  BTC: '#f7931a', ETH: '#627eea', BNB: '#f3ba2f', SOL: '#9945ff',
-  XRP: '#346aa9', ADA: '#0033ad', DOGE: '#c2a633', AVAX: '#e84142',
-  DOT: '#e6007a', MATIC: '#8247e5', LINK: '#375bd2', UNI: '#ff007a',
-  ATOM: '#6f7390', LTC: '#bfbbbb', TRX: '#ef0027',
-}
+const SYMBOLS = DEFAULT_SYMBOLS
 
 interface HoldingCardProps {
   holding: Holding
@@ -69,6 +67,7 @@ function HoldingCard({ holding, currentPrice, onEdit, onDelete }: HoldingCardPro
 
 function AddHoldingModal({ onClose, editHolding }: { onClose: () => void; editHolding?: Holding }) {
   const { addHolding, updateHolding } = usePortfolioStore()
+  const { success, error: hapticError } = useHaptic()
 
   const [symbol, setSymbol] = useState(editHolding?.symbol || 'BTC')
   const [amount, setAmount] = useState(editHolding ? String(editHolding.amount) : '')
@@ -79,8 +78,8 @@ function AddHoldingModal({ onClose, editHolding }: { onClose: () => void; editHo
   const handleSubmit = async () => {
     const amountNum = parseFloat(amount)
     const priceNum = parseFloat(entryPrice)
-    if (!amountNum || amountNum <= 0) { setError('Введите корректный объём'); return }
-    if (!priceNum || priceNum <= 0) { setError('Введите корректную цену входа'); return }
+    if (!amountNum || amountNum <= 0) { hapticError(); setError('Введите корректный объём'); return }
+    if (!priceNum || priceNum <= 0) { hapticError(); setError('Введите корректную цену входа'); return }
 
     setLoading(true)
     try {
@@ -89,8 +88,10 @@ function AddHoldingModal({ onClose, editHolding }: { onClose: () => void; editHo
       } else {
         await addHolding({ symbol, amount: amountNum, entry_price: priceNum })
       }
+      success()
       onClose()
     } catch {
+      hapticError()
       setError('Ошибка при сохранении')
     } finally {
       setLoading(false)
@@ -166,6 +167,8 @@ export function Portfolio() {
   const [showModal, setShowModal] = useState(false)
   const [editHolding, setEditHolding] = useState<Holding | undefined>()
 
+  const { pullProgress, isRefreshing, bindEvents } = usePullToRefresh({ onRefresh: fetchHoldings })
+
   useEffect(() => {
     fetchHoldings()
   }, [])
@@ -186,7 +189,8 @@ export function Portfolio() {
   const isPositive = totalPnl >= 0
 
   return (
-    <div className="px-4 pt-4 pb-24">
+    <div className="px-4 pt-4 pb-24" ref={bindEvents}>
+      <PullIndicator pullProgress={pullProgress} isRefreshing={isRefreshing} />
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-text-primary font-bold text-xl">Портфолио</h1>
         <button
@@ -212,7 +216,7 @@ export function Portfolio() {
         </div>
       )}
 
-      {loading && <p className="text-text-muted text-sm text-center py-8">Загрузка...</p>}
+      {loading && <PortfolioSkeleton />}
 
       {!loading && holdings.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">

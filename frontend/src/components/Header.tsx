@@ -1,6 +1,7 @@
 import { useCryptoStore } from '../store/cryptoStore'
 import { useAlertStore } from '../store/alertStore'
 import { usePortfolioStore } from '../store/portfolioStore'
+import { useHaptic } from '../hooks/useTelegram'
 
 type Tab = 'market' | 'watchlist' | 'portfolio' | 'alerts'
 
@@ -13,7 +14,13 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
   const { wsConnected, watchlist } = useCryptoStore()
   const { alerts } = useAlertStore()
   const { holdings } = usePortfolioStore()
+  const { selectionChanged } = useHaptic()
   const activeAlerts = alerts.filter((a) => a.active && !a.triggered).length
+
+  const handleTabChange = (tab: Tab) => {
+    selectionChanged()
+    onTabChange(tab)
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-bg-primary border-b border-border backdrop-blur-xl bg-opacity-95">
@@ -35,7 +42,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
 
         <div className="flex gap-1 bg-bg-secondary rounded-xl p-1">
           <button
-            onClick={() => onTabChange('market')}
+            onClick={() => handleTabChange('market')}
             className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
               activeTab === 'market'
                 ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/20'
@@ -45,7 +52,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
             Market
           </button>
           <button
-            onClick={() => onTabChange('watchlist')}
+            onClick={() => handleTabChange('watchlist')}
             className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1 ${
               activeTab === 'watchlist'
                 ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/20'
@@ -62,7 +69,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
             )}
           </button>
           <button
-            onClick={() => onTabChange('portfolio')}
+            onClick={() => handleTabChange('portfolio')}
             className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1 ${
               activeTab === 'portfolio'
                 ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/20'
@@ -79,7 +86,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
             )}
           </button>
           <button
-            onClick={() => onTabChange('alerts')}
+            onClick={() => handleTabChange('alerts')}
             className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1 ${
               activeTab === 'alerts'
                 ? 'bg-accent-blue text-white shadow-lg shadow-accent-blue/20'

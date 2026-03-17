@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useAlertStore } from '../store/alertStore'
 import { Alert } from '../types'
+import { DEFAULT_SYMBOLS } from '../constants/coins'
+import { useHaptic } from '../hooks/useTelegram'
+import { AlertSkeleton } from '../components/skeletons/AlertSkeleton'
 
-const SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'LINK', 'UNI', 'ATOM', 'LTC', 'TRX']
+const SYMBOLS = DEFAULT_SYMBOLS
 const BOT_NAME = import.meta.env.VITE_TELEGRAM_BOT_NAME || ''
 
 function getUserId(): number {
@@ -86,6 +89,7 @@ function ConnectBotBanner({ connectUrl }: { connectUrl: string }) {
 
 function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUrl: string | null }) {
   const { createAlert } = useAlertStore()
+  const { success, error: hapticError } = useHaptic()
 
   const [symbol, setSymbol] = useState('BTC')
   const [alertType, setAlertType] = useState<'price' | 'pct'>('price')
@@ -100,10 +104,10 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
 
     if (alertType === 'price') {
       const priceNum = parseFloat(price)
-      if (!priceNum || priceNum <= 0) { setError('Введите корректную цену'); return }
+      if (!priceNum || priceNum <= 0) { hapticError(); setError('Введите корректную цену'); return }
     } else {
       const thr = parseFloat(threshold)
-      if (!thr || thr <= 0) { setError('Введите корректный процент'); return }
+      if (!thr || thr <= 0) { hapticError(); setError('Введите корректный процент'); return }
     }
 
     setLoading(true)
@@ -123,7 +127,8 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
         onClose()
         return
       }
-      if (result.error) { setError(result.error); return }
+      if (result.error) { hapticError(); setError(result.error); return }
+      success()
       onClose()
     } finally {
       setLoading(false)
@@ -247,7 +252,7 @@ function AddAlertModal({ onClose, connectUrl }: { onClose: () => void; connectUr
 }
 
 export function Alerts() {
-  const { alerts, loading, connected, fetchAlerts, checkConnection } = useAlertStore()
+  const { alerts, loading, connected, fetchAlerts, checkConnection, deleteAlert, resetAlert } = useAlertStore()
   const [showModal, setShowModal] = useState(false)
   const [connectUrl, setConnectUrl] = useState<string | null>(null)
 
@@ -280,7 +285,7 @@ export function Alerts() {
 
       {connected === false && connectUrl && <ConnectBotBanner connectUrl={connectUrl} />}
 
-      {loading && <p className="text-text-muted text-sm text-center py-8">Загрузка...</p>}
+      {loading && <AlertSkeleton />}
 
       {!loading && alerts.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -293,7 +298,7 @@ export function Alerts() {
       {active.length > 0 && (
         <div className="flex flex-col gap-3 mb-4">
           {active.map((a) => (
-            <AlertCard key={a.id} alert={a} onDelete={() => useAlertStore.getState().deleteAlert(a.id)} onReset={() => useAlertStore.getState().resetAlert(a.id)} />
+            <AlertCard key={a.id} alert={a} onDelete={() => deleteAlert(a.id)} onReset={() => resetAlert(a.id)} />
           ))}
         </div>
       )}
@@ -303,7 +308,7 @@ export function Alerts() {
           <p className="text-text-muted text-xs font-medium mb-2 mt-2">Сработавшие</p>
           <div className="flex flex-col gap-3">
             {triggered.map((a) => (
-              <AlertCard key={a.id} alert={a} onDelete={() => useAlertStore.getState().deleteAlert(a.id)} onReset={() => useAlertStore.getState().resetAlert(a.id)} />
+              <AlertCard key={a.id} alert={a} onDelete={() => deleteAlert(a.id)} onReset={() => resetAlert(a.id)} />
             ))}
           </div>
         </>

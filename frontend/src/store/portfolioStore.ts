@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { Holding } from '../types'
+import { STORAGE_KEYS } from '../constants/storage'
 
 const API = import.meta.env.VITE_API_URL || '/api'
-const LOCAL_KEY = 'cf_portfolio'
 
 function getUserId(): number {
   return window.Telegram?.WebApp?.initDataUnsafe?.user?.id ?? 0
@@ -30,7 +30,7 @@ export const usePortfolioStore = create<PortfolioStore>((set, get) => ({
     if (!userId) {
       // localStorage fallback for non-Telegram context
       try {
-        const stored = localStorage.getItem(LOCAL_KEY)
+        const stored = localStorage.getItem(STORAGE_KEYS.PORTFOLIO)
         set({ holdings: stored ? JSON.parse(stored) : [] })
       } catch {
         set({ holdings: [] })
@@ -62,7 +62,7 @@ export const usePortfolioStore = create<PortfolioStore>((set, get) => ({
       }
       set((s) => {
         const updated = [holding, ...s.holdings]
-        localStorage.setItem(LOCAL_KEY, JSON.stringify(updated))
+        localStorage.setItem(STORAGE_KEYS.PORTFOLIO, JSON.stringify(updated))
         return { holdings: updated }
       })
       return
@@ -82,7 +82,7 @@ export const usePortfolioStore = create<PortfolioStore>((set, get) => ({
     if (!userId) {
       set((s) => {
         const updated = s.holdings.map((h) => h.id === id ? { ...h, amount, entry_price } : h)
-        localStorage.setItem(LOCAL_KEY, JSON.stringify(updated))
+        localStorage.setItem(STORAGE_KEYS.PORTFOLIO, JSON.stringify(updated))
         return { holdings: updated }
       })
       return
@@ -102,7 +102,7 @@ export const usePortfolioStore = create<PortfolioStore>((set, get) => ({
     if (!userId) {
       set((s) => {
         const updated = s.holdings.filter((h) => h.id !== id)
-        localStorage.setItem(LOCAL_KEY, JSON.stringify(updated))
+        localStorage.setItem(STORAGE_KEYS.PORTFOLIO, JSON.stringify(updated))
         return { holdings: updated }
       })
       return

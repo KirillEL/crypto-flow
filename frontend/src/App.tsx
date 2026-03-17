@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { Header } from './components/Header'
 import { Home } from './pages/Home'
@@ -7,6 +7,9 @@ import { CoinDetail } from './pages/CoinDetail'
 import { Alerts } from './pages/Alerts'
 import { Portfolio } from './pages/Portfolio'
 import { useTelegram } from './hooks/useTelegram'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { OnboardingModal } from './components/OnboardingModal'
+import { STORAGE_KEYS } from './constants/storage'
 
 type Tab = 'market' | 'watchlist' | 'portfolio' | 'alerts'
 
@@ -42,19 +45,31 @@ function MainLayout() {
 }
 
 export default function App() {
-  useTelegram()
+  const { user } = useTelegram()
+  const location = useLocation()
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !localStorage.getItem(STORAGE_KEYS.ONBOARDED)
+  )
+
+  if (showOnboarding) {
+    return <OnboardingModal onDone={() => setShowOnboarding(false)} userName={user?.first_name} />
+  }
 
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary">
       <MainLayout />
       <main>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/watchlist" element={<Watchlist />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/coin/:symbol" element={<CoinDetail />} />
-          <Route path="/alerts" element={<Alerts />} />
-        </Routes>
+        <ErrorBoundary>
+          <div key={location.pathname} className="animate-slide-left">
+            <Routes>
+              <Route path="/" element={<ErrorBoundary><Home /></ErrorBoundary>} />
+              <Route path="/watchlist" element={<ErrorBoundary><Watchlist /></ErrorBoundary>} />
+              <Route path="/portfolio" element={<ErrorBoundary><Portfolio /></ErrorBoundary>} />
+              <Route path="/coin/:symbol" element={<ErrorBoundary><CoinDetail /></ErrorBoundary>} />
+              <Route path="/alerts" element={<ErrorBoundary><Alerts /></ErrorBoundary>} />
+            </Routes>
+          </div>
+        </ErrorBoundary>
       </main>
     </div>
   )

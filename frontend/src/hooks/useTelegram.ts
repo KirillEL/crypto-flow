@@ -24,6 +24,11 @@ declare global {
           hide: () => void
           onClick: (fn: () => void) => void
         }
+        HapticFeedback: {
+          impactOccurred: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void
+          notificationOccurred: (type: 'error' | 'success' | 'warning') => void
+          selectionChanged: () => void
+        }
         themeParams: Record<string, string>
         colorScheme: 'light' | 'dark'
         initDataUnsafe: {
@@ -53,4 +58,16 @@ export const useTelegram = () => {
   }, [tg])
 
   return { tg, user: tg?.initDataUnsafe?.user }
+}
+
+export const useHaptic = () => {
+  const hf = window.Telegram?.WebApp?.HapticFeedback
+  return {
+    tapLight: () => hf?.impactOccurred('light'),
+    tapMedium: () => hf?.impactOccurred('medium'),
+    success: () => hf?.notificationOccurred('success'),
+    error: () => hf?.notificationOccurred('error'),
+    warning: () => hf?.notificationOccurred('warning'),
+    selectionChanged: () => hf?.selectionChanged(),
+  }
 }

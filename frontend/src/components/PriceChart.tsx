@@ -6,6 +6,7 @@ import {
   type IChartApi,
   type ISeriesApi,
   type CandlestickData,
+  type UTCTimestamp,
 } from 'lightweight-charts'
 import type { Candle, TimeFrame } from '../types'
 
@@ -81,7 +82,7 @@ export function PriceChart({ candles, timeFrame, onTimeFrameChange, isPositive }
   useEffect(() => {
     if (!seriesRef.current || !candles.length) return
     const data: CandlestickData[] = candles.map((c) => ({
-      time: c.time as never,
+      time: c.time as UTCTimestamp,
       open: c.open,
       high: c.high,
       low: c.low,

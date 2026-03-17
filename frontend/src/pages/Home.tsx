@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { useCryptoStore } from '../store/cryptoStore'
 import { CoinCard } from '../components/CoinCard'
 import { SearchBar } from '../components/SearchBar'
 import { SortBar } from '../components/SortBar'
 import { MarketBanner } from '../components/MarketBanner'
 import { useWebSocket } from '../hooks/useWebSocket'
+import { usePullToRefresh } from '../hooks/usePullToRefresh'
+import { PullIndicator } from '../components/PullIndicator'
 import type { Coin } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
@@ -17,23 +19,26 @@ export function Home() {
 
   useWebSocket(WS_SYMBOLS)
 
-  useEffect(() => {
-    const fetchCoins = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const res = await fetch(`${API_BASE}/coins`)
-        if (!res.ok) throw new Error('Failed to fetch coins')
-        const data: Coin[] = await res.json()
-        setCoins(data)
-      } catch (e) {
-        setError((e as Error).message)
-      } finally {
-        setLoading(false)
-      }
+  const fetchCoins = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`${API_BASE}/coins`)
+      if (!res.ok) throw new Error('Failed to fetch coins')
+      const data: Coin[] = await res.json()
+      setCoins(data)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoading(false)
     }
-    fetchCoins()
   }, [setCoins, setLoading, setError])
+
+  const { pullProgress, isPulling, isRefreshing, bindEvents } = usePullToRefresh({ onRefresh: fetchCoins })
+
+  useEffect(() => {
+    fetchCoins()
+  }, [fetchCoins])
 
   // Dynamic search — fires when query doesn't match local coins
   useEffect(() => {
@@ -124,7 +129,8 @@ export function Home() {
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in" ref={bindEvents}>
+      <PullIndicator pullProgress={pullProgress} isRefreshing={isRefreshing} />
       <MarketBanner />
       <div className="pt-2">
         <SearchBar />

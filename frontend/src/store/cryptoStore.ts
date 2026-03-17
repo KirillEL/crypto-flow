@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Coin, SortField, SortOrder, TimeFrame } from '../types'
+import { STORAGE_KEYS } from '../constants/storage'
 
 interface CryptoStore {
   coins: Coin[]
@@ -24,11 +25,9 @@ interface CryptoStore {
   setWsConnected: (v: boolean) => void
 }
 
-const WATCHLIST_KEY = 'cryptoflow_watchlist'
-
 const loadWatchlist = (): string[] => {
   try {
-    return JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '[]')
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.WATCHLIST) || '[]')
   } catch {
     return []
   }
@@ -66,7 +65,7 @@ export const useCryptoStore = create<CryptoStore>((set) => ({
       const next = state.watchlist.includes(symbol)
         ? state.watchlist.filter((s) => s !== symbol)
         : [...state.watchlist, symbol]
-      localStorage.setItem(WATCHLIST_KEY, JSON.stringify(next))
+      localStorage.setItem(STORAGE_KEYS.WATCHLIST, JSON.stringify(next))
       return { watchlist: next }
     }),
 

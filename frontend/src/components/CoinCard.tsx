@@ -4,24 +4,8 @@ import type { Coin } from '../types'
 import { formatPrice, formatPercent } from '../utils/format'
 import { Sparkline } from './Sparkline'
 import { useCryptoStore } from '../store/cryptoStore'
-
-const COIN_COLORS: Record<string, string> = {
-  BTC: '#f7931a',
-  ETH: '#627eea',
-  BNB: '#f3ba2f',
-  SOL: '#9945ff',
-  XRP: '#346aa9',
-  ADA: '#0033ad',
-  DOGE: '#c2a633',
-  DOT: '#e6007a',
-  MATIC: '#8247e5',
-  AVAX: '#e84142',
-  LINK: '#375bd2',
-  UNI: '#ff007a',
-  ATOM: '#6f4e8b',
-  LTC: '#bfbbbb',
-  TRX: '#ef0027',
-}
+import { COIN_COLORS } from '../constants/coins'
+import { useHaptic } from '../hooks/useTelegram'
 
 interface CoinCardProps {
   coin: Coin
@@ -31,13 +15,14 @@ interface CoinCardProps {
 export const CoinCard = memo(({ coin, rank }: CoinCardProps) => {
   const navigate = useNavigate()
   const { watchlist, toggleWatchlist } = useCryptoStore()
+  const { tapLight, selectionChanged } = useHaptic()
   const isPositive = coin.priceChangePercent24h >= 0
   const isWatched = watchlist.includes(coin.symbol)
   const color = COIN_COLORS[coin.symbol] || '#3b82f6'
 
   return (
     <div
-      onClick={() => navigate(`/coin/${coin.symbol}`)}
+      onClick={() => { tapLight(); navigate(`/coin/${coin.symbol}`) }}
       className="flex items-center gap-3 px-4 py-3.5 hover:bg-bg-hover active:bg-bg-hover transition-colors cursor-pointer"
     >
       {/* Rank */}
@@ -84,6 +69,7 @@ export const CoinCard = memo(({ coin, rank }: CoinCardProps) => {
       <button
         onClick={(e) => {
           e.stopPropagation()
+          selectionChanged()
           toggleWatchlist(coin.symbol)
         }}
         className="flex-shrink-0 ml-1 p-1 rounded-lg hover:bg-bg-card transition-colors"
